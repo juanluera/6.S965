@@ -38,40 +38,7 @@ def twos_complement_to_dec(number, bits=32):
     
     return twos_complement
 
-def cordic_arctan_fixed(x, y, iterations=16):
-    # Convert to Q15 fixed-point format using bit shifts
-    x = (x << 15) // 32768
-    y = (y << 15) // 32768
-    
-    # Pre-calculated arctangent values in Q15 format
-    cordic_gain = [int(np.arctan(1 / (2 ** i)) * 32768) for i in range(iterations)]
 
-   # print([hex(i) for i in cordic_gain])
-    phase = 0
-
-    if x < 0 and y >= 0:  # Second quadrant
-        #print("check",x,y)
-        phase = int(np.pi * 32768)  # +π/2 in Q15 format
-        x, y = -x, -y
-    elif x < 0 and y < 0:  # Third quadrant
-        #print("check2",x,y)
-        phase = int(-np.pi * 32768 )  # -π/2 in Q15 format
-        x, y = -x, -y
-    
-    for i in range(iterations):
-        if y >= 0:
-            x_new = x + (y >> i)
-            y_new = y - (x >> i)
-            phase += cordic_gain[i]
-        else:
-            x_new = x - (y >> i)
-            y_new = y + (x >> i)
-            phase -= cordic_gain[i]
-        x, y = x_new, y_new
-
-        #print(f"{i}: ",twos_complement_to_hex(phase),phase,x,y)
-    
-    return phase
 
 def split_32bit_to_16bit(number):
     # Ensure the input is within the range of a 32-bit signed integer
@@ -129,21 +96,13 @@ class SSSTester:
  
     def model(self, transaction):
       #define a model here
-      print("type: ",type(transaction))
-      msb, lsb = split_32bit_to_16bit(transaction)
-      print(msb,lsb)
-      
-      square_msb = msb*msb
-      square_lsb = lsb*lsb
-      square_sum = square_msb+square_lsb
-      print("Square sum: ", square_sum)
-      atan = cordic_arctan_fixed(lsb,msb)
-      #print(hex(atan))
-      print("atan: ", atan)
-    #   new_atan = to_fixed16(atan)
-    #   total = combine_to_32bit(new_atan,0)
-      print(hex(atan))
-      self.expected_output.append(twos_complement_to_dec(atan))
+      if transaction < 0:
+          transaction += 102943
+        
+      left_shifted = transaction*66815
+      print(left_shifted)
+        
+      self.expected_output.append(left_shifted)
 
 
 class AXISMonitor(BusMonitor):
@@ -269,7 +228,7 @@ async def reset(clk,rst_in,wait_count,enable):
     rst_in.value = ~enable
 
 @cocotb.test()
-async def test_arctan(dut):
+async def test_processing(dut):
     """cocotb test for square rooter"""
     tester = SSSTester(dut)
     cocotb.start_soon(Clock(dut.s00_axis_aclk, 10, units="ns").start())
@@ -294,7 +253,7 @@ async def test_arctan(dut):
         # Combine into 32-bit value
         combined = (x_int << 16) | (y_int & 0xFFFF)
         s00_inputs.append(combined)
-    #s00_inputs = [-858511761, -322552566, -601672447, 483146023, 766848203, -1029893609, 778906637, -1073151462, 1071580159, -808310240, 76234710, -277529134, -49659922, 604189927, -401196195, -884333492]
+    s00_inputs = [-69028, 41465, 78006, 53710, -89222, 23335, 2997, -67772, 40831, 92752, -90430, -30799, 58198, -32939, -102110, 53644]
     print(s00_inputs)
     # for i in range(50):
     #   data = {'type':'single', "contents":{"data": random.randint(1,2**31),"last":0,"strb":15}}
@@ -322,14 +281,14 @@ def AXIS_runner():
     sim = os.getenv("SIM", "icarus")
     proj_path = Path(__file__).resolve().parent.parent
     sys.path.append(str(proj_path / "sim" / "model"))
-    sources = [proj_path / "hdl" / "arctan.sv"] #grow/modify this as needed.
+    sources = [proj_path / "hdl" / "processing.sv"] #grow/modify this as needed.
     build_test_args = ["-Wall"]#,"COCOTB_RESOLVE_X=ZEROS"]
     parameters = {}
     sys.path.append(str(proj_path / "sim"))
     runner = get_runner(sim)
     runner.build(
         sources=sources,
-        hdl_toplevel="arctan",
+        hdl_toplevel="processing",
         always=True,
         build_args=build_test_args,
         parameters=parameters,
@@ -338,8 +297,8 @@ def AXIS_runner():
     )
     run_test_args = []
     runner.test(
-        hdl_toplevel="arctan",
-        test_module="test_arctan",
+        hdl_toplevel="processing",
+        test_module="test_processing",
         test_args=run_test_args,
         waves=True
     )

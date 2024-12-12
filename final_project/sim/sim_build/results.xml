@@ -1,8 +1,6 @@
 <testsuites name="results">
   <testsuite name="all" package="all">
-    <property name="random_seed" value="1733366683" />
-    <testcase name="test_arctan" classname="test_arctan" file="/Users/j_luera/Documents/Angel Escuela/6.S965/final_project/sim/test_arctan.py" lineno="215" time="0.20668601989746094" sim_time_ns="6770.001" ratio_time="32755.00202364276">
-      <failure message="Test failed with RANDOM_SEED=1733366683" />
-    </testcase>
+    <property name="random_seed" value="1733954150" />
+    <testcase name="test_arctan" classname="test_arctan" file="/Users/j_luera/Documents/Angel Escuela/6.S965/final_project/sim/test_arctan.py" lineno="271" time="0.16633892059326172" sim_time_ns="6770.001" ratio_time="40700.04167307461" />
   </testsuite>
 </testsuites>

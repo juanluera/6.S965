@@ -38,40 +38,7 @@ def twos_complement_to_dec(number, bits=32):
     
     return twos_complement
 
-def cordic_arctan_fixed(x, y, iterations=16):
-    # Convert to Q15 fixed-point format using bit shifts
-    x = (x << 15) // 32768
-    y = (y << 15) // 32768
-    
-    # Pre-calculated arctangent values in Q15 format
-    cordic_gain = [int(np.arctan(1 / (2 ** i)) * 32768) for i in range(iterations)]
 
-   # print([hex(i) for i in cordic_gain])
-    phase = 0
-
-    if x < 0 and y >= 0:  # Second quadrant
-        #print("check",x,y)
-        phase = int(np.pi * 32768)  # +π/2 in Q15 format
-        x, y = -x, -y
-    elif x < 0 and y < 0:  # Third quadrant
-        #print("check2",x,y)
-        phase = int(-np.pi * 32768 )  # -π/2 in Q15 format
-        x, y = -x, -y
-    
-    for i in range(iterations):
-        if y >= 0:
-            x_new = x + (y >> i)
-            y_new = y - (x >> i)
-            phase += cordic_gain[i]
-        else:
-            x_new = x - (y >> i)
-            y_new = y + (x >> i)
-            phase -= cordic_gain[i]
-        x, y = x_new, y_new
-
-        #print(f"{i}: ",twos_complement_to_hex(phase),phase,x,y)
-    
-    return phase
 
 def split_32bit_to_16bit(number):
     # Ensure the input is within the range of a 32-bit signed integer
@@ -129,20 +96,12 @@ class SSSTester:
  
     def model(self, transaction):
       #define a model here
-      print("type: ",type(transaction))
-      msb, lsb = split_32bit_to_16bit(transaction)
-      print(msb,lsb)
+      if transaction < 0:
+          transaction += int(math.pi*2**15)
+        
+      left_shifted = transaction*2**-15
       
-      square_msb = msb*msb
-      square_lsb = lsb*lsb
-      square_sum = square_msb+square_lsb
-      print("Square sum: ", square_sum)
-      atan = cordic_arctan_fixed(lsb,msb)
-      #print(hex(atan))
-      print("atan: ", atan)
-    #   new_atan = to_fixed16(atan)
-    #   total = combine_to_32bit(new_atan,0)
-      print(hex(atan))
+        
       self.expected_output.append(twos_complement_to_dec(atan))
 
 
